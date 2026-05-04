@@ -1,0 +1,26 @@
+{
+  "name": "com.chopchopgames.ugm.googlesheettable",
+  "version": "0.1.0",
+  "displayName": "Google Sheet Table",
+  "description": "구글 시트의 테이블을 Unity 에셋으로 가져오고, 런타임에 강타입 자료구조(List/Dictionary/DictionaryOfList)로 파싱해 어디서든 접근하게 해주는 모듈. 에디터에서 시트를 다운로드해 TableAsset으로 캐싱하고, 사용자가 정의한 [GoogleSheetRow] Row 타입에 맞춰 자동 매핑합니다.",
+  "unity": "6000.0",
+  "documentationUrl": "https://github.com/devchop2/ugm-modules/tree/main/Packages/com.chopchopgames.ugm.googlesheettable",
+  "dependencies": {},
+  "keywords": [
+    "ugm",
+    "google-sheet",
+    "data",
+    "table",
+    "scriptableobject"
+  ],
+  "author": {
+    "name": "ChopChopGames"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Usage",
+      "description": "GoogleSheetTableManager.Load 후 GoogleSheetAccessors로 강타입 접근하는 최소 예시",
+      "path": "Samples~/BasicUsage"
+    }
+  ]
+}
