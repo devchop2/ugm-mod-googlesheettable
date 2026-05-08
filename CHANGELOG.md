@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.2] - 2026-05-08
+### Changed
+- **기본 사용자 데이터 폴더 이름 변경**: `Assets/_UserData/` → `Assets/GoogleSheetTableData/`
+  - `GoogleSheetConfig.outputFolder` 기본값: `Assets/GoogleSheetTableData/Tables`
+  - `GoogleSheetDownloader.DefaultConfigPath`: `Assets/GoogleSheetTableData/GoogleSheetConfig.asset`
+  - `AccessorGenerator.OutputPath`: `Assets/GoogleSheetTableData/Generated/GoogleSheetAccessors.generated.cs`
+- 모듈 별 폴더로 분리되어 다른 모듈과의 데이터 충돌 방지 + 의도가 더 명확
+
+### Migration Notes
+- 기존에 `Assets/_UserData/` 에 데이터가 있는 사용자는 영향 없음 — 기존 config 의 `outputFolder` 값이 그대로 유지되므로 계속 동작
+- 새 폴더 컨벤션을 적용하려면 `Assets/_UserData/` → `Assets/GoogleSheetTableData/` 로 폴더 이름 변경 후 config 의 outputFolder 도 갱신
+- 신규 프로젝트 / 신규 config 자동 생성 시에만 새 경로 사용
+
 ## [0.1.1] - 2026-05-08
 ### Added
 - **개별 테이블 reload 기능**

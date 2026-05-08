@@ -10,7 +10,7 @@ namespace ChopChopGames.UGM.GoogleSheetTable.EditorTools
 {
     public static class GoogleSheetDownloader
     {
-        public const string DefaultConfigPath = "Assets/_UserData/GoogleSheetConfig.asset";
+        public const string DefaultConfigPath = "Assets/GoogleSheetTableData/GoogleSheetConfig.asset";
 
         public static GoogleSheetConfig FindConfig()
         {

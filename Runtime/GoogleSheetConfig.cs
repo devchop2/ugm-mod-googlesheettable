@@ -14,7 +14,7 @@ namespace ChopChopGames.UGM.GoogleSheetTable
     public class GoogleSheetConfig : ScriptableObject
     {
         [Tooltip("Root folder for generated TableAsset files. Each SpreadSheet creates its own subfolder under this path.")]
-        public string outputFolder = "Assets/_UserData/Tables";
+        public string outputFolder = "Assets/GoogleSheetTableData/Tables";
 
         [Tooltip("List of SpreadSheets. Each SpreadSheet has its own spreadsheetId and a list of sheet tabs.")]
         public List<SpreadSheetEntry> spreadSheets = new List<SpreadSheetEntry>();

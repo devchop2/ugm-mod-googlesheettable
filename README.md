@@ -29,12 +29,12 @@ using ChopChopGames.UGM.GoogleSheetTable.Generated; // 자동 생성된 액세�
 
 ---
 
-## 2. 사용자 데이터 위치 (`_UserData/` 컨벤션)
+## 2. 사용자 데이터 위치 (`GoogleSheetTableData/` 컨벤션)
 
-이 모듈은 **재사용 가능한 코드만** 패키지에 포함하고, 사용자별 데이터는 `Assets/_UserData/` 아래에 별도로 둡니다. 다른 사용자가 이 모듈을 받아도 자기 시트로 깨끗하게 시작할 수 있게 하기 위함이에요.
+이 모듈은 **재사용 가능한 코드만** 패키지에 포함하고, 사용자별 데이터는 `Assets/GoogleSheetTableData/` 아래에 별도로 둡니다. 다른 사용자가 이 모듈을 받아도 자기 시트로 깨끗하게 시작할 수 있게 하기 위함이에요.
 
 ```
-Assets/_UserData/                                ← 사용자별 데이터 (모듈에 포함되지 않음)
+Assets/GoogleSheetTableData/                                ← 사용자별 데이터 (모듈에 포함되지 않음)
 ├── GoogleSheetConfig.asset                      ← Config 인스턴스 (시트 ID, 시트 목록)
 ├── TableScripts/                                ← 사용자가 정의한 Row 타입
 │   └── SampleCSV.cs
@@ -55,7 +55,7 @@ Assets/_UserData/                                ← 사용자별 데이터 (모
 
 ### 3.1. Config 생성
 
-메뉴 **`ChopChopGames/GoogleSheet/Config`** 클릭. 없으면 `Assets/_UserData/GoogleSheetConfig.asset`이 자동 생성되고 인스펙터가 열립니다.
+메뉴 **`ChopChopGames/GoogleSheet/Config`** 클릭. 없으면 `Assets/GoogleSheetTableData/GoogleSheetConfig.asset`이 자동 생성되고 인스펙터가 열립니다.
 
 ### 3.2. SpreadSheet 항목 추가
 
@@ -75,7 +75,7 @@ Assets/_UserData/                                ← 사용자별 데이터 (모
 
 ### 3.4. Row 타입 정의
 
-`Assets/_UserData/TableScripts/SampleCSV.cs` 참고. 시트의 컬럼 헤더와 정확히 일치하는 필드/프로퍼티를 가진 클래스에 `[GoogleSheetRow("tableName")]` 어트리뷰트 부착:
+`Assets/GoogleSheetTableData/TableScripts/SampleCSV.cs` 참고. 시트의 컬럼 헤더와 정확히 일치하는 필드/프로퍼티를 가진 클래스에 `[GoogleSheetRow("tableName")]` 어트리뷰트 부착:
 
 ```csharp
 using ChopChopGames.UGM.GoogleSheetTable;
@@ -96,7 +96,7 @@ public class SampleCSV
 
 메뉴 **`ChopChopGames/GoogleSheet/LoadTables`** 실행. 이 작업이 한 번에 처리하는 일:
 1. **`Repair cachedAsset Links` 자동 선행 실행** *(v0.1.1+)* — outputFolder 의 기존 `.asset` 파일들을 tableName 매칭으로 cachedAsset 슬롯에 복구
-2. 각 시트를 TSV로 다운로드해 `Assets/_UserData/Tables/<spreadsheet>/<table>.asset`으로 저장
+2. 각 시트를 TSV로 다운로드해 `Assets/GoogleSheetTableData/Tables/<spreadsheet>/<table>.asset`으로 저장
 3. Sheet 항목의 `cachedAsset` 슬롯에 자동 연결
 4. Row 타입을 자동 매칭 (`[GoogleSheetRow]` 어트리뷰트 기준)
 5. **`AccessorGenerator.Generate`를 자동 호출** → `Generated/GoogleSheetAccessors.generated.cs` 생성
@@ -227,7 +227,7 @@ int n = row.GetInt("count", defaultValue: 0);
 큰 config 도 빠르게 다룰 수 있도록 인스펙터에 검색·정렬·복구 도구가 들어있습니다.
 
 ```
-┌─ outputFolder: Assets/_UserData/Tables ──────────────────────┐
+┌─ outputFolder: Assets/GoogleSheetTableData/Tables ──────────────────────┐
 │                                                              │
 │ [검색 ___________________________________] [Clear]           │
 │ [Sort SpreadSheets A→Z]  [Sort Sheets A→Z]                   │
@@ -319,7 +319,7 @@ int n = row.GetInt("count", defaultValue: 0);
 → SheetEntry 의 `headerRow` 필드를 실제 헤더 행 번호(1-based)로 설정. 예: 첫 행이 바로 헤더면 `1`, 5행이 헤더면 `5`.
 
 **partial class 관련 컴파일 에러**
-→ 옛 .unitypackage 시절의 Generated 파일이 남아 있을 수 있음. `Assets/_UserData/Generated/` 외 다른 곳에 옛 `GoogleSheetAccessors.generated.cs`가 있다면 삭제하고 LoadTables 재실행.
+→ 옛 .unitypackage 시절의 Generated 파일이 남아 있을 수 있음. `Assets/GoogleSheetTableData/Generated/` 외 다른 곳에 옛 `GoogleSheetAccessors.generated.cs`가 있다면 삭제하고 LoadTables 재실행.
 
 ---
 

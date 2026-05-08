@@ -12,7 +12,7 @@ namespace ChopChopGames.UGM.GoogleSheetTable.EditorTools
     public static class AccessorGenerator
     {
         // 사용자 데이터로 분리. 다른 위치를 원하면 이 상수 또는 GoogleSheetConfig.outputFolder를 활용.
-        public const string OutputPath = "Assets/_UserData/Generated/GoogleSheetAccessors.generated.cs";
+        public const string OutputPath = "Assets/GoogleSheetTableData/Generated/GoogleSheetAccessors.generated.cs";
 
         public static void Generate(GoogleSheetConfig config)
         {
