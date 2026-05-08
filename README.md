@@ -1,6 +1,6 @@
 # Google Sheet Table
 
-`com.chopchopgames.ugm.googlesheettable` — UGM 모듈
+`com.chopchopgames.ugm.googlesheettable` — UGM 모듈 (현재 버전 **0.1.1**)
 
 구글 시트 데이터를 Unity 에셋으로 캐싱하고, 런타임에 **강타입 자료구조(List / Dictionary / DictionaryOfList)** 로 파싱해 어디서든 접근하게 해주는 모듈입니다. 사용자가 정의한 `[GoogleSheetRow("table")]` 클래스를 보고 **자동으로 강타입 액세서 코드까지 생성**해줍니다.
 
@@ -71,6 +71,7 @@ Assets/_UserData/                                ← 사용자별 데이터 (모
 - **gid**: 시트 탭의 `gid=` 쿼리 파라미터 값
 - **keyColumn**: Dictionary로 쓸 때 키 컬럼명 (List면 비워둠)
 - **dataStructure**: `List` / `Dictionary` / `DictionaryOfList` 중 선택
+- **headerRow** *(v0.1.1+)*: 헤더가 위치한 행 번호. 1-based, **기본 2** (1행 노트, 2행 헤더, 3행부터 데이터). 첫 행이 바로 헤더면 `1`, 5행이 헤더면 `5` (1~4행은 무시).
 
 ### 3.4. Row 타입 정의
 
@@ -94,12 +95,19 @@ public class SampleCSV
 ### 3.5. 다운로드 + 강타입 액세서 생성
 
 메뉴 **`ChopChopGames/GoogleSheet/LoadTables`** 실행. 이 작업이 한 번에 처리하는 일:
-1. 각 시트를 TSV로 다운로드해 `Assets/_UserData/Tables/<spreadsheet>/<table>.asset`으로 저장
-2. Sheet 항목의 `cachedAsset` 슬롯에 자동 연결
-3. Row 타입을 자동 매칭 (`[GoogleSheetRow]` 어트리뷰트 기준)
-4. **`AccessorGenerator.Generate`를 자동 호출** → `Generated/GoogleSheetAccessors.generated.cs` 생성
+1. **`Repair cachedAsset Links` 자동 선행 실행** *(v0.1.1+)* — outputFolder 의 기존 `.asset` 파일들을 tableName 매칭으로 cachedAsset 슬롯에 복구
+2. 각 시트를 TSV로 다운로드해 `Assets/_UserData/Tables/<spreadsheet>/<table>.asset`으로 저장
+3. Sheet 항목의 `cachedAsset` 슬롯에 자동 연결
+4. Row 타입을 자동 매칭 (`[GoogleSheetRow]` 어트리뷰트 기준)
+5. **`AccessorGenerator.Generate`를 자동 호출** → `Generated/GoogleSheetAccessors.generated.cs` 생성
 
 이후 시트 데이터만 갱신할 땐 LoadTables 다시 실행. Row 타입을 추가했을 때는 메뉴 `ChopChopGames/GoogleSheet/Generate Accessors`로 액세서만 재생성도 가능.
+
+### 3.6. 단일 테이블만 다시 받기 *(v0.1.1+)*
+
+전체 LoadTables 가 너무 무거울 때:
+- **Config 인스펙터**: 각 SheetEntry foldout 우측의 **`⟳ Reload`** 버튼 → 그 시트 한 개만 다운로드
+- **TableAsset 인스펙터**: 상단의 **`⟳ Reload from Sheet`** 버튼 → config 의 매칭 entry 자동 검색 후 단일 다운로드
 
 ---
 
@@ -175,13 +183,28 @@ int n = row.GetInt("count", defaultValue: 0);
 - 시트 우상단 `공유` → `링크가 있는 모든 사용자` → **뷰어** 권한
 - 사내 도메인 한정 공유도 가능. 이 경우 CI/빌드 머신이 같은 도메인 계정으로 로그인된 브라우저에서 동작해야 함.
 
+비공개 시트는 LoadTables 실행 시 콘솔에 다음 에러가 출력됩니다 *(v0.1.1+)*:
+```
+[GoogleSheet] 구글로부터 다운로드 실패 — '<spreadsheet> / <tableName>'
+  사유: TSV 가 아닌 HTML 응답을 받았습니다 (대개 로그인 리다이렉트 = 비공개 시트).
+  URL: ...
+  ▶ 해결: 시트 공유 권한을 '링크가 있는 모든 사용자: 뷰어' 로 변경하세요.
+```
+
 ### 5.2. 시트 데이터 형식
+
+기본 (`headerRow = 2`):
 
 | 행 | 용도 |
 |---|---|
 | **1행** | 비워둠. 메모/타입 주석 등 자유롭게 작성해도 파서가 무시. |
 | **2행** | **헤더** — 컬럼 이름. Row 클래스의 필드/프로퍼티 이름과 정확히 일치해야 함. |
 | **3행~** | 데이터. 빈 행은 자동 스킵. |
+
+`headerRow` 를 다른 값으로 설정한 경우 *(v0.1.1+)*:
+- `headerRow = 1`: 1행이 헤더, 2행부터 데이터 (노트 행 없는 시트)
+- `headerRow = 5`: 1~4행은 무시, 5행이 헤더, 6행부터 데이터
+- 시트마다 다르게 설정 가능 (per-SheetEntry)
 
 배열·리스트 컬럼: 셀 안에 `1,2,3` 또는 `1|2|3` 형태로 입력. 자동으로 split.
 
@@ -199,23 +222,92 @@ int n = row.GetInt("count", defaultValue: 0);
 
 ---
 
-## 7. 메뉴 정리
+## 7. Config 인스펙터 사용법 *(v0.1.1+)*
+
+큰 config 도 빠르게 다룰 수 있도록 인스펙터에 검색·정렬·복구 도구가 들어있습니다.
+
+```
+┌─ outputFolder: Assets/_UserData/Tables ──────────────────────┐
+│                                                              │
+│ [검색 ___________________________________] [Clear]           │
+│ [Sort SpreadSheets A→Z]  [Sort Sheets A→Z]                   │
+│                                                              │
+│ ▼ skills (8 sheet)                          ★               │
+│    ▶ skills - skills            [⟳ Reload]                   │
+│    ▶ skills - passives          [⟳ Reload]                   │
+│    ...                                                       │
+│ ▶ stages (6 sheet)                                           │
+│ ▶ users (5 sheet)                                            │
+│ [+ Add SpreadSheet]                                          │
+│                                                              │
+│ [구글시트에서 로드하기 (LoadTables)]                          │
+│ [Repair cachedAsset Links] [Sync From Seed JSON…]            │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- **검색 바**: spreadsheet 이름과 sheet 의 tableName 양쪽에 substring 매칭
+- **Sort SpreadSheets A→Z**: 최상위 SpreadSheet 목록 알파벳 정렬
+- **Sort Sheets A→Z**: 각 SpreadSheet 안의 sheet 목록 정렬
+- **Repair cachedAsset Links**: outputFolder 의 `.asset` 들을 tableName 매칭으로 cachedAsset 자동 연결 (LoadTables 직전에도 자동 호출)
+- **Sync From Seed JSON…**: 외부 JSON 파일로 spreadSheets 를 일괄 재구성 (cachedAsset 은 가능한 한 보존)
+
+---
+
+## 8. 메뉴 정리
 
 | 메뉴 | 동작 |
 |---|---|
 | `ChopChopGames/GoogleSheet/Config` | Config.asset 열거나 신규 생성 |
-| `ChopChopGames/GoogleSheet/LoadTables` | 시트 다운로드 + cachedAsset 연결 + Row 자동 매칭 + Accessors 재생성 (한 번에) |
+| `ChopChopGames/GoogleSheet/LoadTables` | 시트 다운로드 + cachedAsset 자동 복구 + Row 자동 매칭 + Accessors 재생성 (한 번에) |
 | `ChopChopGames/GoogleSheet/Generate Accessors` | Accessors 코드만 재생성 (Row 타입을 추가/수정한 직후 유용) |
+| `ChopChopGames/GoogleSheet/Repair cachedAsset Links` *(v0.1.1+)* | outputFolder 의 .asset 들을 cachedAsset 슬롯에 자동 재연결 |
+| `ChopChopGames/GoogleSheet/Sync Config From Seed JSON…` *(v0.1.1+)* | 외부 JSON 으로 config.spreadSheets 를 통째로 재구성 (cachedAsset 보존) |
+
+### Seed JSON 형식
+
+`Sync Config From Seed JSON…` 에서 사용하는 JSON 의 형식:
+
+```json
+[
+  {
+    "name": "skills",
+    "spreadsheetId": "1HEDWYn1y3Tk9Job9mizRR4otlGoy0bZM",
+    "sheets": [
+      ["skills - skills", "1003554570", 1, "id", 2],
+      ["skills - passives", "1279942844", 2, "skillId", 2]
+    ]
+  },
+  {
+    "name": "users",
+    "spreadsheetId": "1larfI5-H9BiqNKjmYJVNXTRKSF_7dSHg",
+    "sheets": [
+      ["users - userPrefs", "884950172", 1, "id", 2]
+    ]
+  }
+]
+```
+
+각 sheet 의 5개 원소: `[tableName, gid, dataStructure(0=List/1=Dict/2=DofL), keyColumn, headerRow(1-based)]`.
+
+외부 도구(스크립트, 다른 에디터 확장 등)로 config 를 생성/관리할 때 유용.
 
 ---
 
-## 8. 트러블슈팅
+## 9. 트러블슈팅
 
 **`SampleCSV` 같은 Row 타입이 자동 매칭 안 됨**
 → `[GoogleSheetRow("tableName")]` 어트리뷰트의 문자열이 시트 항목의 `tableName`과 정확히 일치하는지 확인. 대소문자 무시되지만 공백/특수문자는 일치해야 함.
 
-**LoadTables 시 "다운로드 실패"**
-→ 시트 공유 권한이 "링크 보유 사용자: 뷰어" 인지 확인. 비공개 시트는 받을 수 없음.
+**LoadTables 시 "구글로부터 다운로드 실패"** *(v0.1.1+)*
+→ 콘솔 에러 메시지의 `▶ 해결:` 줄에 정확한 원인이 표시됩니다. 대부분 시트 공유 권한이 "링크 보유 사용자: 뷰어" 가 아닌 경우. 비공개 시트가 200 OK 와 함께 로그인 HTML 을 반환하는 silent 실패도 별도로 감지됩니다.
+
+**`'<tableName>' 에 해당하는 cachedAsset 이 없습니다` 런타임 에러**
+→ 1) 메뉴 `Repair cachedAsset Links` 한 번 실행 (outputFolder 에 .asset 이 이미 있으면 자동 재연결) 2) 그래도 안 되면 LoadTables 재실행 — 단, 시트 공유 권한이 풀려있어야 다운로드 성공.
+
+**외부 도구로 GoogleSheetConfig.asset 을 직접 편집했더니 entry 가 사라짐**
+→ Unity 가 in-memory 상태와 디스크의 외부 변경을 동기화하지 못해 SaveAssets 시 외부 변경이 덮어써질 수 있음. 외부 편집 후엔:
+1) Project 창에서 `GoogleSheetConfig.asset` 우클릭 → **Reimport**
+2) 또는 외부 편집 결과를 JSON 으로 만들어 `Sync Config From Seed JSON…` 메뉴로 적용 (Unity API 통한 안전한 갱신)
 
 **Accessors 코드 생성 후 컴파일 에러**
 → Row 타입의 필드/프로퍼티 이름과 시트 헤더가 다르면, 채워지지 않은 채로 나옴(에러 아님). 진짜 에러라면 Row 타입의 namespace 충돌 가능 — `global::` prefix가 자동으로 붙도록 생성되지만, 같은 이름 클래스가 여러 namespace에 있으면 모호해질 수 있음.
@@ -223,12 +315,15 @@ int n = row.GetInt("count", defaultValue: 0);
 **런타임에 `GoogleSheetAccessors.X.Y`가 null**
 → Manager.LoadAll이 아직 안 끝났거나, 그 시트의 `cachedAsset`이 비어 있는 경우. LoadTables를 한 번도 안 실행했으면 `cachedAsset`이 null. Manager 인스펙터에서 Load On Awake 켜져 있는지, 그리고 Load 콜백 안에서 액세서를 사용하고 있는지 확인.
 
+**시트의 헤더 행이 2번째가 아닌 다른 위치인데 데이터가 깨짐** *(v0.1.1+)*
+→ SheetEntry 의 `headerRow` 필드를 실제 헤더 행 번호(1-based)로 설정. 예: 첫 행이 바로 헤더면 `1`, 5행이 헤더면 `5`.
+
 **partial class 관련 컴파일 에러**
 → 옛 .unitypackage 시절의 Generated 파일이 남아 있을 수 있음. `Assets/_UserData/Generated/` 외 다른 곳에 옛 `GoogleSheetAccessors.generated.cs`가 있다면 삭제하고 LoadTables 재실행.
 
 ---
 
-## 9. 의존성
+## 10. 의존성
 
 - 외부 SDK 없음. 순수 C# + UnityEngine + UnityEditor.
 - Unity 6000.0 (Unity 6) 이상 권장.
@@ -236,6 +331,8 @@ int n = row.GetInt("count", defaultValue: 0);
 
 ---
 
-## 10. 변경 이력
+## 11. 변경 이력
 
-[CHANGELOG.md](./CHANGELOG.md) 참조.
+[CHANGELOG.md](./CHANGELOG.md) 참조. 최근 릴리스 요약:
+- **v0.1.1** (2026-05-08): 개별 테이블 reload, headerRow 설정, cachedAsset 자동 복구, Sync Config From Seed JSON, 검색/정렬, 실패 로그 강화
+- **v0.1.0** (2026-05-03): 초기 UPM 모듈 릴리스
