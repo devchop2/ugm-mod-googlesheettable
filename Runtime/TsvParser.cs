@@ -5,30 +5,36 @@ namespace ChopChopGames.UGM.GoogleSheetTable
 {
     public static class TsvParser
     {
-        // Row 0 is reserved (left blank for descriptions/notes), headers live on row 1, data starts at row 2.
-        private const int HeaderRowIndex = 1;
-        private const int DataStartRowIndex = 2;
+        // Default layout: row 1 is reserved for notes/descriptions, headers on row 2 (1-based), data starts at row 3.
+        // Pass headerRow=1 for sheets where the very first row is the header (no notes row).
+        // headerRow is 1-BASED to match the user-visible Google Sheets row numbers.
+        public const int DefaultHeaderRow = 2;
 
-        public static Table Parse(string name, string tsv, string keyColumn = null)
+        public static Table Parse(string name, string tsv, string keyColumn = null, int headerRow = DefaultHeaderRow)
         {
-            return ParseInternal(name, tsv, '\t', keyColumn);
+            return ParseInternal(name, tsv, '\t', keyColumn, headerRow);
         }
 
-        public static Table ParseCsv(string name, string csv, string keyColumn = null)
+        public static Table ParseCsv(string name, string csv, string keyColumn = null, int headerRow = DefaultHeaderRow)
         {
-            return ParseInternal(name, csv, ',', keyColumn);
+            return ParseInternal(name, csv, ',', keyColumn, headerRow);
         }
 
-        private static Table ParseInternal(string name, string text, char delimiter, string keyColumn)
+        private static Table ParseInternal(string name, string text, char delimiter, string keyColumn, int headerRow)
         {
+            // headerRow is 1-based. Internal index needs to be 0-based.
+            if (headerRow < 1) headerRow = 1;
+            int headerIndex = headerRow - 1;
+            int dataStartIndex = headerIndex + 1;
+
             var rawRows = SplitRows(text, delimiter);
-            if (rawRows.Count <= HeaderRowIndex)
+            if (rawRows.Count <= headerIndex)
                 return new Table(name, new List<string>(), new List<TableRow>(), keyColumn);
 
-            var headers = rawRows[HeaderRowIndex];
-            var rows = new List<TableRow>(System.Math.Max(0, rawRows.Count - DataStartRowIndex));
+            var headers = rawRows[headerIndex];
+            var rows = new List<TableRow>(System.Math.Max(0, rawRows.Count - dataStartIndex));
 
-            for (int i = DataStartRowIndex; i < rawRows.Count; i++)
+            for (int i = dataStartIndex; i < rawRows.Count; i++)
             {
                 var cells = rawRows[i];
                 if (IsEmpty(cells)) continue;

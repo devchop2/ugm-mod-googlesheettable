@@ -86,6 +86,7 @@ namespace ChopChopGames.UGM.GoogleSheetTable.EditorTools
             EnsureStyles();
             serializedObject.Update();
 
+            DrawReloadBar();
             DrawMeta();
             EditorGUILayout.Space();
             DrawToolbar();
@@ -361,5 +362,40 @@ namespace ChopChopGames.UGM.GoogleSheetTable.EditorTools
                 newCells.GetArrayElementAtIndex(i).stringValue = values[i];
             }
         }
+
+        // [v0.1.1] 이 단일 TableAsset 만 시트에서 다시 다운로드.
+        private void DrawReloadBar()
+        {
+            var asset = (TableAsset)target;
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("Single-Table Reload", EditorStyles.boldLabel, GUILayout.Width(160));
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(new GUIContent("⟳ Reload from Sheet", "이 테이블만 다시 다운로드합니다 (config 의 매칭 entry 를 자동 찾음)"), GUILayout.Width(180), GUILayout.Height(22)))
+                {
+                    var config = GoogleSheetDownloader.FindConfig();
+                    if (config == null) { Debug.LogError("[GoogleSheet] GoogleSheetConfig 를 찾을 수 없습니다."); return; }
+                    if (asset == null || string.IsNullOrEmpty(asset.tableName)) { Debug.LogError("[GoogleSheet] 이 TableAsset 에 tableName 이 비어있습니다."); return; }
+                    bool found = false;
+                    foreach (var ss in config.spreadSheets)
+                    {
+                        if (ss?.sheets == null) continue;
+                        foreach (var sh in ss.sheets)
+                        {
+                            if (sh != null && sh.tableName == asset.tableName)
+                            {
+                                GoogleSheetDownloader.DownloadOne(config, ss, sh);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
+                    if (!found) Debug.LogWarning($"[GoogleSheet] '{asset.tableName}' 에 매칭되는 SheetEntry 가 config 에 없습니다.");
+                }
+            }
+            EditorGUILayout.Space(2);
+        }
+
     }
 }

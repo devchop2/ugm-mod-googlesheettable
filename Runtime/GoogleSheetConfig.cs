@@ -52,6 +52,9 @@ namespace ChopChopGames.UGM.GoogleSheetTable
 
             [Tooltip("Cached TableAsset created by ChopChopGames/GoogleSheet/LoadTables. Runtime reads this — no network call.")]
             public TableAsset cachedAsset;
+
+            [Tooltip("1-based row number in the source spreadsheet where the column headers live. Default 2 — row 1 is reserved for notes/descriptions, headers on row 2, data starts at row 3. Set to 1 if the very first row is the header (no notes row above).")]
+            public int headerRow = 2;
         }
     }
 }
