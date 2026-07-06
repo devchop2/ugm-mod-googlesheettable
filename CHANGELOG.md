@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.3] - 2026-07-06
+### Added
+- **개별 시트 삭제 기능 (`✕ Delete` 버튼)**
+  - `GoogleSheetConfig` 인스펙터의 각 SheetEntry foldout 우측, `⟳ Reload` 버튼 옆에 빨간 **`✕ Delete`** 버튼 추가
+  - 확인 다이얼로그 후 한 번에 세 가지를 정리:
+    1. **config 세팅 제거** — 해당 `SheetEntry` 를 `spreadSheets[].sheets[]` 에서 삭제
+    2. **로드된 `.asset` 파일 삭제** — `cachedAsset` 이 가리키는 `TableAsset` 을 `AssetDatabase.DeleteAsset` 으로 제거
+    3. **게임 시작 로딩 대상에서 자동 제외** — 시작 로딩(`GoogleSheetTableManager.LoadAll`)·런타임 조회가 모두 `config.spreadSheets` 를 순회하므로 config entry 제거만으로 로딩 대상에서 빠짐
+  - OnGUI 도중 리스트 즉시 수정으로 인한 레이아웃 깨짐 방지를 위해 `EditorApplication.delayCall` 로 실제 삭제를 지연 실행
+  - `.asset` 이 연결되지 않은 entry 는 config 목록에서만 제거
+
+
 ## [0.1.2] - 2026-05-08
 ### Changed
 - **기본 사용자 데이터 폴더 이름 변경**: `Assets/_UserData/` → `Assets/GoogleSheetTableData/`

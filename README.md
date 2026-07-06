@@ -109,6 +109,17 @@ public class SampleCSV
 - **Config 인스펙터**: 각 SheetEntry foldout 우측의 **`⟳ Reload`** 버튼 → 그 시트 한 개만 다운로드
 - **TableAsset 인스펙터**: 상단의 **`⟳ Reload from Sheet`** 버튼 → config 의 매칭 entry 자동 검색 후 단일 다운로드
 
+### 3.7. 단일 테이블 삭제하기 *(v0.1.3+)*
+
+더 이상 쓰지 않는 시트를 정리할 때:
+
+- **Config 인스펙터**: 각 SheetEntry foldout 우측의 **`✕ Delete`** 버튼(빨간색) → 확인 다이얼로그 후 삭제
+- 한 번에 세 가지를 함께 정리합니다:
+  1. **config 세팅 제거** — `spreadSheets[].sheets[]` 목록에서 해당 entry 삭제
+  2. **로드된 `.asset` 파일 삭제** — `cachedAsset` 이 가리키는 `TableAsset` 을 `AssetDatabase.DeleteAsset` 으로 제거
+  3. **게임 시작 로딩 대상에서 제외** — 시작 시 로딩(`GoogleSheetTableManager.LoadAll`)과 런타임 조회는 모두 `config.spreadSheets` 를 순회하므로, config entry 제거만으로 자동 제외됨
+- `.asset` 이 연결돼 있지 않은 entry 는 config 목록에서만 제거됩니다.
+
 ---
 
 ## 4. 런타임에서 데이터 읽기
@@ -233,8 +244,8 @@ int n = row.GetInt("count", defaultValue: 0);
 │ [Sort SpreadSheets A→Z]  [Sort Sheets A→Z]                   │
 │                                                              │
 │ ▼ skills (8 sheet)                          ★               │
-│    ▶ skills - skills            [⟳ Reload]                   │
-│    ▶ skills - passives          [⟳ Reload]                   │
+│    ▶ skills - skills        [⟳ Reload] [✕ Delete]           │
+│    ▶ skills - passives      [⟳ Reload] [✕ Delete]           │
 │    ...                                                       │
 │ ▶ stages (6 sheet)                                           │
 │ ▶ users (5 sheet)                                            │
@@ -334,5 +345,7 @@ int n = row.GetInt("count", defaultValue: 0);
 ## 11. 변경 이력
 
 [CHANGELOG.md](./CHANGELOG.md) 참조. 최근 릴리스 요약:
+- **v0.1.3** (2026-07-06): 개별 시트 **삭제(`✕ Delete`)** 버튼 — config entry + `.asset` 파일 제거, 시작 로딩 대상에서 자동 제외
+- **v0.1.2** (2026-05-08): 기본 데이터 폴더명 변경 (`_UserData/` → `GoogleSheetTableData/`)
 - **v0.1.1** (2026-05-08): 개별 테이블 reload, headerRow 설정, cachedAsset 자동 복구, Sync Config From Seed JSON, 검색/정렬, 실패 로그 강화
 - **v0.1.0** (2026-05-03): 초기 UPM 모듈 릴리스

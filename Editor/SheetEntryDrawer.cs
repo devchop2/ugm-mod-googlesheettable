@@ -36,9 +36,13 @@ namespace ChopChopGames.UGM.GoogleSheetTable.EditorTools
             if (!string.IsNullOrEmpty(typeSuffix)) headerLabel += $"  →  {typeSuffix}";
 
             // [v0.1.1] foldout 라인에 작은 "Reload" 버튼을 우측에 표시 (개별 테이블 다운로드)
+            // [추가] Reload 옆에 "Delete" 버튼 — config entry + cachedAsset(.asset) 삭제 (시작 로딩은 config 기반이라 자동 제외)
             const float kReloadW = 70f;
-            var foldoutRect = new Rect(line.x, line.y, line.width - kReloadW - 4, line.height);
-            var reloadRect = new Rect(line.xMax - kReloadW, line.y, kReloadW, line.height);
+            const float kDeleteW = 62f;
+            const float kGap = 4f;
+            var foldoutRect = new Rect(line.x, line.y, line.width - kReloadW - kDeleteW - kGap * 2, line.height);
+            var reloadRect = new Rect(line.xMax - kReloadW - kDeleteW - kGap, line.y, kReloadW, line.height);
+            var deleteRect = new Rect(line.xMax - kDeleteW, line.y, kDeleteW, line.height);
             property.isExpanded = EditorGUI.Foldout(foldoutRect, property.isExpanded, headerLabel, true);
 
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(tableName.stringValue) || string.IsNullOrEmpty(gid.stringValue)))
@@ -48,6 +52,15 @@ namespace ChopChopGames.UGM.GoogleSheetTable.EditorTools
                     TriggerReload(property);
                 }
             }
+
+            // Delete 버튼 — 빨간 톤으로 강조
+            var prevColor = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.95f, 0.5f, 0.5f);
+            if (GUI.Button(deleteRect, new GUIContent("✕ Delete", "이 sheet 항목을 config 에서 제거하고, 로드된 .asset 파일도 삭제합니다.")))
+            {
+                TriggerDelete(property);
+            }
+            GUI.backgroundColor = prevColor;
 
             if (!property.isExpanded) return;
 
@@ -104,6 +117,83 @@ namespace ChopChopGames.UGM.GoogleSheetTable.EditorTools
             if (ss?.sheets == null || shIdx >= ss.sheets.Count) return;
             var entry = ss.sheets[shIdx];
             GoogleSheetDownloader.DownloadOne(config, ss, entry);
+        }
+
+        // [추가] 개별 sheet 삭제 — config entry 제거 + cachedAsset(.asset) 파일 삭제.
+        //        시작 시 로딩(GoogleSheetTableManager.LoadAll)과 런타임 조회(GoogleSheetTableLoader)는
+        //        모두 config.spreadSheets 를 순회하므로, config entry 제거만으로 로딩 대상에서도 자동 제외된다.
+        private static void TriggerDelete(SerializedProperty entryProp)
+        {
+            var so = entryProp.serializedObject;
+            so.ApplyModifiedProperties();
+            var config = so.targetObject as GoogleSheetConfig;
+            if (config == null)
+            {
+                Debug.LogError("[GoogleSheet] SheetEntry delete: 부모 GoogleSheetConfig 를 찾을 수 없습니다.");
+                return;
+            }
+
+            var path = entryProp.propertyPath;
+            int ssIdx = ExtractArrayIndex(path, "spreadSheets.Array.data[");
+            int shIdx = ExtractArrayIndex(path, "sheets.Array.data[");
+            if (ssIdx < 0 || shIdx < 0)
+            {
+                Debug.LogError($"[GoogleSheet] SheetEntry delete: 인덱스 추출 실패 path='{path}'");
+                return;
+            }
+            if (config.spreadSheets == null || ssIdx >= config.spreadSheets.Count) return;
+            var ss = config.spreadSheets[ssIdx];
+            if (ss?.sheets == null || shIdx >= ss.sheets.Count) return;
+
+            var entry = ss.sheets[shIdx];
+            var tableLabel = string.IsNullOrEmpty(entry?.tableName) ? "(unnamed)" : entry.tableName;
+            var assetPath = (entry != null && entry.cachedAsset != null)
+                ? AssetDatabase.GetAssetPath(entry.cachedAsset) : string.Empty;
+
+            var msg = $"'{tableLabel}' sheet 를 삭제할까요?\n\n" +
+                      "• config 목록에서 제거됩니다.\n" +
+                      "• 게임 시작 시 로딩 대상에서도 제외됩니다.\n" +
+                      (string.IsNullOrEmpty(assetPath)
+                          ? "• 연결된 .asset 파일은 없습니다."
+                          : $"• 로드된 .asset 파일도 삭제됩니다:\n  {assetPath}");
+
+            if (!EditorUtility.DisplayDialog("Sheet 삭제 확인", msg, "삭제", "취소")) return;
+
+            // OnGUI 도중 리스트를 즉시 수정하면 레이아웃이 깨지므로 다음 에디터 틱으로 지연 실행.
+            EditorApplication.delayCall += () => DeleteEntry(config, ssIdx, shIdx);
+            GUIUtility.ExitGUI();
+        }
+
+        private static void DeleteEntry(GoogleSheetConfig config, int ssIdx, int shIdx)
+        {
+            if (config == null || config.spreadSheets == null) return;
+            if (ssIdx < 0 || ssIdx >= config.spreadSheets.Count) return;
+            var ss = config.spreadSheets[ssIdx];
+            if (ss?.sheets == null || shIdx < 0 || shIdx >= ss.sheets.Count) return;
+
+            var entry = ss.sheets[shIdx];
+
+            // 1) 로드된 .asset 파일 삭제
+            if (entry != null && entry.cachedAsset != null)
+            {
+                var assetPath = AssetDatabase.GetAssetPath(entry.cachedAsset);
+                if (!string.IsNullOrEmpty(assetPath))
+                {
+                    if (AssetDatabase.DeleteAsset(assetPath))
+                        Debug.Log($"[GoogleSheet] cachedAsset 삭제: {assetPath}");
+                    else
+                        Debug.LogWarning($"[GoogleSheet] cachedAsset 삭제 실패: {assetPath}");
+                }
+            }
+
+            // 2) config entry 제거 (→ 시작 로딩/런타임 조회 대상에서도 제외)
+            Undo.RecordObject(config, "Delete Sheet Entry");
+            var removedName = entry?.tableName;
+            ss.sheets.RemoveAt(shIdx);
+            EditorUtility.SetDirty(config);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log($"[GoogleSheet] SheetEntry 삭제 완료 — '{removedName}' (spreadSheets[{ssIdx}].sheets[{shIdx}]).");
         }
 
         private static int ExtractArrayIndex(string path, string marker)
